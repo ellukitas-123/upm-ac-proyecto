@@ -6,11 +6,11 @@
 
         ORG     $400
 
-* Definición de equivalencias
+* Definiciï¿½n de equivalencias
 *********************************
 
 MR1A    EQU     $effc01       * de modo A (escritura)
-MR2A    EQU     $effc01       * de modo A (2º escritura)
+MR2A    EQU     $effc01       * de modo A (2ï¿½ escritura)
 SRA     EQU     $effc03       * de estado A (lectura)
 CSRA    EQU     $effc03       * de seleccion de reloj A (escritura)
 CRA     EQU     $effc05       * de control A (escritura)
@@ -20,7 +20,7 @@ ACR	EQU	$effc09	      * de control auxiliar
 IMR     EQU     $effc0B       * de mascara de interrupcion A (escritura)
 ISR     EQU     $effc0B       * de estado de interrupcion A (lectura)
 MR1B    EQU     $effc11       * de modo B (escritura)
-MR2B    EQU     $effc11       * de modo B (2º escritura)
+MR2B    EQU     $effc11       * de modo B (2ï¿½ escritura)
 CRB     EQU     $effc15	      * de control A (escritura)
 TBB     EQU     $effc17       * buffer transmision B (escritura)
 RBB	EQU	$effc17       * buffer recepcion B (lectura)
@@ -29,8 +29,8 @@ CSRB	EQU	$effc13       * de seleccion de reloj B (escritura)
 
 CR	EQU	$0D	      * Carriage Return
 LF	EQU	$0A	      * Line Feed
-FLAGT	EQU	2	      * Flag de transmisión
-FLAGR   EQU     0	      * Flag de recepción
+FLAGT	EQU	2	      * Flag de transmisiï¿½n
+FLAGR   EQU     0	      * Flag de recepciï¿½n
 
 
 **************************** INIT *************************************************************
@@ -45,29 +45,75 @@ INIT:
 **************************** FIN INIT *********************************************************
 
 **************************** PRINT ************************************************************
-PRINT:  
-        RTS                                 
+PRINT:  MOVE.L 4(A7),A0         * Acceso al parÃ¡metro de Buffer 
+        MOVE.W 8(A7),D1         * Acceso al parÃ¡metro de TamaÃ±o
+        EOR.L   D0,D0           * Valor retorno a 0
+
+        CMP.W   #0,D1           * TamaÃ±o = 0?
+        BEQ     FIN_PRINT
+
+ESP_PRINT:
+        MOVE.B  SRA,D2         * comprobar que estÃ¡ listo para enviar datos (TxRDY y TxEMT)
+        BTST    #2,D2           
+        BEQ     ESP_PRINT
+        BTST   #3,D2
+        BEQ     ESP_PRINT
+        
+        MOVE.B  (A0)+,TBA       * Escribe el caracter al puerto A y avanza el puntero
+        ADD.L   #1,D0
+        SUB.W   #1,D1
+        BNE     ESP_PRINT
+FIN_PRINT:
+        RTS
+                             
 **************************** FIN PRINT ********************************************************
 
 **************************** SCAN ************************************************************
 SCAN:   
-        RTS                                 
+        MOVE.L  4(A7),A0        * Acceso al parÃ¡metro de Buffer
+        MOVE.W  8(A7),D1        * Acceso al parÃ¡metro de TamaÃ±o
+        EOR.L   D0,D0           * Valor retorno a 0
+
+        CMP.W   #0,D1           * TamaÃ±o = 0?
+        BEQ     FIN_SCAN
+
+ESP_SCAN:
+        MOVE.B  SRA,D2
+        BTST    #0,D2           * NOT(D2(0)) -> Z Comprobar que el bit de RxRDY es 0
+        BEQ     ESP_SCAN
+
+        MOVE.B  RBA,(A0)+       * Guardar caracter e ir a la siguiente posicion (postincremento)
+        ADD.L   #1,D0
+        SUB.W   #1,D1           * Quedan carÃ¡cteres por leer?
+        BNE     ESP_SCAN 
+
+FIN_SCAN:
+        RTS
 
 **************************** FIN PROGRAMA PRINCIPAL ******************************************
 
 **************************** PROGRAMA PRINCIPAL **********************************************
-TAMANO EQU 1
+TAMANO  EQU 4
+BUFFER  DS.B 2000
 
-INICIO: BSR             INIT                * Inicia el controlador
-* OTRO:   MOVE.W  	#TAMANO,-(A7)
-* 	MOVE.L          #$5000,-(A7)        * Prepara la dirección del buffer
-*         BSR             SCAN                * Recibe la linea
-*         ADD.L           #6,A7               * Restaura la pila
-* 	MOVE.W  	#TAMANO,-(A7)
-*         MOVE.L          #$5000,-(A7)        * Prepara la dirección del buffer
-*         BSR             PRINT               * Imprime línea
-*         ADD.L           #6,A7               * Restaura la pila
-* 	BRA		OTRO
+INICIO: 
+        LINK            A6,#-4
+        LEA             BUFFER,A0
+        BSR             INIT                * Inicia el controlador
+
+OTRO:   
+        MOVE.L          A0,-4(A6)
+        MOVE.W  	#TAMANO,-(A7)
+ 	MOVE.L          A0,-(A7)        * Prepara la direcciï¿½n del buffer
+        BSR             SCAN                * Recibe la linea
+        ADD.L           #6,A7               * Restaura la pila
+        MOVE.L          -4(A6),A0
+ 	MOVE.W  	#TAMANO,-(A7)
+        MOVE.L          A0,-(A7)                * Prepara la direcciï¿½n del buffer
+        BSR             PRINT                   * Imprime lï¿½nea
+        ADD.L           #6,A7               * Restaura la pila
+ 	ADD.L           D0,A0
+        BRA		OTRO
 
         BREAK
 **************************** FIN PROGRAMA PRINCIPAL ******************************************
