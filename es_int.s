@@ -59,9 +59,9 @@ SCAN:
 	MOVE.W			14(A6),D2			* Tamano
 
 	CMP.W			#0,D1
-	BEQ				scan_linea_a
+	BEQ				scan_preparacion
 	CMP.W			#1,D1
-	BEQ				scan_linea_b
+	BEQ				scan_preparacion
 
 scan_error:
 	MOVE.L  #-1,D0         * Poner código de error
