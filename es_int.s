@@ -45,7 +45,7 @@ INIT:
 	MOVE.B 			#$40,IVR			* Vector de interrupción
 	MOVE.B 			#%00100010,IMR		* Habilitar interrupciones
 
-	MOVE.L			RTI,$100			* Añadir la dirección de la RTI a la tabla de vectores de interrupcion
+	MOVE.L			#RTI,$100			* Añadir la dirección de la RTI a la tabla de vectores de interrupcion
 
 	BSR 			INI_BUFS
 	RTS
@@ -89,6 +89,50 @@ scan_bucle_fin:
 
 scan_fin:
 	MOVEM.L 		D1-D3/A0, (A7)+		* Restaurar el estado anterior (No deja ningún valor representativo en los registros)
+	UNLK			A6
+	RTS
+
+PRINT:
+	LINK			A6,#0				* Marco de pila
+	MOVEM.L 		D1-D4/A0, -(A7)		* Guardar el estado anterior (No deja ningún valor representativo en los registros)
+
+	MOVE.L			8(A6),A0			* *Buffer
+	MOVE.W			12(A6),D2			* Descriptor
+	MOVE.W			14(A6),D3			* Tamano
+
+	CMP.W			#0,D2
+	BEQ				print_preparacion
+	CMP.W			#1,D2
+	BEQ				print_preparacion
+
+print_error:
+	MOVE.L  #-1,D0         * Poner código de error
+    BRA     print_fin
+
+print_preparacion:
+	MOVE.W			#0,D4
+	ADDQ.W			#2,D2  * Descriptor de transmision
+
+print_bucle:
+	CMP.W			D4,D3
+	BEQ				print_bucle_fin
+
+	MOVE.L			D2,D0
+	MOVE.B			(A0)+,D1
+	BSR ESCCAR
+
+	CMP.L				#-1,D0
+	BEQ				print_bucle_fin
+
+	ADD.W			#1,D4
+	BRA				print_bucle
+
+print_bucle_fin:
+	* Reactivar interrupciones de la DUART
+	MOVE.L			D4,D0
+
+print_fin:
+	MOVEM.L 		D1-D4/A0, (A7)+		* Restaurar el estado anterior (No deja ningún valor representativo en los registros)
 	UNLK			A6
 	RTS
 
