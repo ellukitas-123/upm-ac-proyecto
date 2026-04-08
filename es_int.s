@@ -28,6 +28,11 @@ LF		EQU		$0A				* Line Feed
 FLAGT	EQU		2				* Flag de transmision
 FLAGR	EQU		0				* Flag de recepcion
 
+		ORG 	$0
+		DC.L 	$8000 			* Puntero de pila
+		DC.L 	INICIO			* Excepción reset a INICIO
+
+		ORG		$400
 IMRCP:	DC.B	0				* Copia del IMR en memoria (IMR no es legible)
 
 ******************************
@@ -67,20 +72,20 @@ SCAN:
 	MOVE.W			14(A6),D2			* Tamano
 
 	CMP.W			#0,D1				* Comprobar descriptor valido
-	BEQ				.Lscan_preparacion
+	BEQ				scan_prep
 	CMP.W			#1,D1
-	BEQ				.Lscan_preparacion
+	BEQ				scan_prep
 
-.Lscan_error:
+scan_error:
 	MOVE.L			#-1,D0				* Poner codigo de error
-	BRA				.Lscan_fin
+	BRA				scan_fin
 
-.Lscan_preparacion:
+scan_prep:
 	MOVE.W			#0,D3
 
-.Lscan_bucle:
+scan_bc:
 	CMP.W			D3,D2
-	BEQ				.Lscan_bucle_fin
+	BEQ				scan_bc_f
 
 	MOVE.L			D1,D0
 
@@ -93,17 +98,17 @@ SCAN:
 	MOVE.W			14(A6),D2			* Recuperar Tamano
 
 	CMP.L			#-1,D0				* Comprobar si hay error
-	BEQ				.Lscan_bucle_fin
+	BEQ				scan_bc_f
 
 	MOVE.B			D0,(A0)+			* Copiar caracter al buffer
 
 	ADD.W			#1,D3				* Sumar contador
-	BRA				.Lscan_bucle
+	BRA				scan_bc
 
-.Lscan_bucle_fin:
+scan_bc_f:
 	MOVE.L			D3,D0				* Valor de retorno (caracteres escritos)
 
-.Lscan_fin:
+scan_fin:
 	UNLK			A6					* Recuperar marco de pila
 	RTS
 
@@ -118,21 +123,21 @@ PRINT:
 	MOVE.W			14(A6),D3			* Tamano
 
 	CMP.W			#0,D2				* Comprobar descriptor valido
-	BEQ				.Lprint_preparacion
+	BEQ				print_prep
 	CMP.W			#1,D2
-	BEQ				.Lprint_preparacion
+	BEQ				print_prep
 
-.Lprint_error:
+print_error:
 	MOVE.L			#-1,D0				* Poner codigo de error
-	BRA				.Lprint_fin
+	BRA				print_fin
 
-.Lprint_preparacion:
+print_prep:
 	MOVE.W			#0,D4
 	ADDQ.W			#2,D2				* Descriptor de transmision
 
-.Lprint_bucle:
+print_bc:
 	CMP.W			D4,D3
-	BEQ				.Lprint_bucle_fin
+	BEQ				print_b_f
 
 	MOVE.L			D2,D0
 	MOVE.B			(A0)+,D1
@@ -147,31 +152,31 @@ PRINT:
 	MOVE.W			14(A6),D3			* Recuperar Tamano
 
 	CMP.L			#-1,D0
-	BEQ				.Lprint_bucle_fin
+	BEQ				print_b_f
 
 	ADD.W			#1,D4
-	BRA				.Lprint_bucle
+	BRA				print_bc
 
-.Lprint_bucle_fin:
+print_b_f:
 	
 	MOVE.L			D4,D0				* Valor de retorno (caracteres escritos)
 	CMP.W			#0,D4
-	BEQ				.Lprint_fin
+	BEQ				print_fin
 
 	SUBQ.W			#2,D2				* Recuperar descriptor original
 	CMP.W			#1,D2				* Elegir línea
-	BEQ				.Lprint_reset_imr_b
+	BEQ				print_i_b
 
-.Lprint_reset_imr_a:					* Reactivar interrupciones de la DUART A
+	* Reactivar interrupciones de la DUART A
 	BSET			#0,IMRCP
 	MOVE.B			IMRCP,IMR
-	BRA				.Lprint_fin
+	BRA				print_fin
 
-.Lprint_reset_imr_b:					* Reactivar interrupciones de la DUART B
+print_i_b:					* Reactivar interrupciones de la DUART B
 	BSET			#4,IMRCP
 	MOVE.B			IMRCP,IMR
 
-.Lprint_fin:
+print_fin:
 	UNLK			A6					* Recuperar marco de pila
 	RTS
 
@@ -184,49 +189,49 @@ RTI:
 	AND.B			IMRCP,D0		
 
 	BTST			#0,D0
-	BNE				.LRTI_TxTDYA
+	BNE				RTI_TxTA
 	BTST			#1,D0
-	BNE				.LRTI_RxRDYA
+	BNE				RTI_RxRA
 	BTST			#4,D0
-	BNE				.LRTI_TxTDYB
+	BNE				RTI_TxTB
 	BTST			#5,D0
-	BNE				.LRTI_RxRDYB
+	BNE				RTI_RxRB
 
-	BRA				.LRTI_Fin
+	BRA				RTI_FIN
 
-.LRTI_RxRDYA:
+RTI_RxRA:
 	MOVE.B			RBA,D1
 	MOVE.L			#0,D0
 	BSR				ESCCAR				
-	BRA				.LRTI_FIN
-.LRTI_RxRDYB:
+	BRA				RTI_FIN
+RTI_RxRB:
 	MOVE.B			RBB,D1
 	MOVE.L			#1,D0
 	BSR				ESCCAR
-	BRA				.LRTI_FIN
-.LRTI_TxTDYA:
+	BRA				RTI_FIN
+RTI_TxTA:
 	MOVE.L			#2,D0
 	BSR				LEECAR
 	CMP.L			#-1,D0
-	BEQ				.LRTI_DESAB_TX_A
+	BEQ				RTI_D_TX_A
 	MOVE.B			D0,TBA
-	BRA				.LRTI_FIN
-.LRTI_TxTDYB:
+	BRA				RTI_FIN
+RTI_TxTB:
 	MOVE.L			#3,D0
 	BSR				LEECAR
 	CMP.L			#-1,D0
-	BEQ				.LRTI_DESAB_TX_B
+	BEQ				RTI_DI_TX_B
 	MOVE.B			D0,TBB
-	BRA				.LRTI_FIN
-.LRTI_DESAB_TX_A:
+	BRA				RTI_FIN
+RTI_D_TX_A:
 	BCLR			#0,IMRCP
 	MOVE.B			IMRCP,IMR
-	BRA				.LRTI_FIN
-.LRTI_DESAB_TX_B:
+	BRA				RTI_FIN
+RTI_DI_TX_B:
 	BCLR			#4,IMRCP
 	MOVE.B			IMRCP,IMR
-	BRA				.LRTI_FIN
-.LRTI_FIN:
+	BRA				RTI_FIN
+RTI_FIN:
     MOVEM.L  (A7)+,A0-A6/D0-D7
 	RTE
 
