@@ -52,13 +52,13 @@ INIT:
 	MOVE.B			#%00000101,CRB		* Full duplex
 
 	MOVE.B			#$40,IVR			* Vector de interrupcion
+	MOVE.L			#RTI,$100			* Añadir la dirección de la RTI a la tabla de vectores de interrupcion
+
+	BSR				INI_BUFS
 
 	MOVE.B			#%00100010,IMRCP	* Guardar copia del IMR
 	MOVE.B			IMRCP,IMR			* Habilitar interrupciones
 
-	MOVE.L			#RTI,$100			* Añadir la dirección de la RTI a la tabla de vectores de interrupcion
-
-	BSR				INI_BUFS
 	RTS
 
 ******************************
@@ -66,6 +66,9 @@ INIT:
 ******************************
 SCAN:
 	LINK			A6,#-8				* Marco de pila
+
+	MOVE.L			#0,D1				* Como luego se usa .W en D1 y D2, se guardará basura en los 
+	MOVE.L			#0,D2				* 16 bits más significativos, entonces hay que resetearlos
 
 	MOVE.L			8(A6),A0			* *Buffer
 	MOVE.W			12(A6),D1			* Descriptor
@@ -117,6 +120,9 @@ scan_fin:
 *******************************
 PRINT:
 	LINK			A6,#-12				* Marco de pila
+
+	MOVE.L			#0,D2				* Como luego se usa .W en D1 y D2, se guardará basura en los 
+	MOVE.L			#0,D3				* 16 bits más significativos, entonces hay que resetearlos
 
 	MOVE.L			8(A6),A0			* *Buffer
 	MOVE.W			12(A6),D2			* Descriptor
