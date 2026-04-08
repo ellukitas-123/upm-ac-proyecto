@@ -156,18 +156,18 @@ PRINT:
 	
 	MOVE.L			D4,D0				* Valor de retorno (caracteres escritos)
 	CMP.W			#0,D4
-	BEQ				print_fin
+	BEQ				.Lprint_fin
 
 	SUBQ.W			#2,D2				* Recuperar descriptor original
 	CMP.W			#1,D2				* Elegir línea
 	BEQ				.Lprint_reset_imr_b
 
-.Lprint_reset_imr_a:						* Reactivar interrupciones de la DUART A
+.Lprint_reset_imr_a:					* Reactivar interrupciones de la DUART A
 	BSET			#0,IMRCP
 	MOVE.B			IMRCP,IMR
 	BRA				.Lprint_fin
 
-.Lprint_reset_imr_b:						* Reactivar interrupciones de la DUART B
+.Lprint_reset_imr_b:					* Reactivar interrupciones de la DUART B
 	BSET			#4,IMRCP
 	MOVE.B			IMRCP,IMR
 
@@ -179,7 +179,7 @@ PRINT:
 ************ RTI ************
 *****************************
 RTI:
-    MOVEM.L 		A0/D0-D1,-(A7)       	* Guarda todos los registros en la pila
+    MOVEM.L 		A0-A6/D0-D7,-(A7)       	* Guarda todos los registros en la pila
 	MOVE.B			ISR,D0
 	AND.B			IMRCP,D0		
 
@@ -227,7 +227,7 @@ RTI:
 	MOVE.B			IMRCP,IMR
 	BRA				.LRTI_FIN
 .LRTI_FIN:
-    MOVEM.L  (A7)+,A0/D0-D1
+    MOVEM.L  (A7)+,A1-A6/D0-D6
 	RTE
 
 ********************************************
