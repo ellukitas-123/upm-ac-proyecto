@@ -1,8 +1,8 @@
-* Definici�n de equivalencias
+* Definicion de equivalencias
 *********************************
 
 MR1A	EQU		$EFFC01			* de modo A (escritura)
-MR2A	EQU		$EFFC01			* de modo A (2� escritura)
+MR2A	EQU		$EFFC01			* de modo A (2a escritura)
 SRA		EQU		$EFFC03			* de estado A (lectura)
 CSRA	EQU		$EFFC03			* de seleccion de reloj A (escritura)
 CRA		EQU		$EFFC05			* de control A (escritura)
@@ -12,7 +12,7 @@ ACR		EQU		$EFFC09			* de control auxiliar
 IMR		EQU		$EFFC0B			* de mascara de interrupcion A (escritura)
 ISR		EQU		$EFFC0B			* de estado de interrupcion A (lectura)
 MR1B	EQU		$EFFC11			* de modo B (escritura)
-MR2B	EQU		$EFFC11			* de modo B (2� escritura)
+MR2B	EQU		$EFFC11			* de modo B (2a escritura)
 CRB		EQU		$EFFC15			* de control A (escritura)
 TBB		EQU		$EFFC17			* buffer transmision B (escritura)
 RBB		EQU		$EFFC17			* buffer recepcion B (lectura)
@@ -22,7 +22,6 @@ CSRB	EQU		$EFFC13			* de seleccion de reloj B (escritura)
 IVR		EQU		$EFFC19			* Vector de interrupcion
 ISR		EQU		$EFFC0B			* Estado de interrupcion
 IMR		EQU		$EFFC0B			* Mascara de interrupcion
-
 
 CR		EQU		$0D				* Carriage Return
 LF		EQU		$0A				* Line Feed
