@@ -26,8 +26,8 @@ IMR		EQU		$EFFC0B			* Mascara de interrupcion
 
 CR		EQU		$0D				* Carriage Return
 LF		EQU		$0A				* Line Feed
-FLAGT	EQU		2				* Flag de transmisi�n
-FLAGR	EQU		0					* Flag de recepci�n
+FLAGT	EQU		2				* Flag de transmision
+FLAGR	EQU		0				* Flag de recepcion
 
 IMRCP:	DC.B	0				* Copia del IMR en memoria (IMR no es legible)
 
@@ -47,7 +47,7 @@ INIT:
 	MOVE.B			#%00000101,CRA		* Full duplex
 	MOVE.B			#%00000101,CRB		* Full duplex
 
-	MOVE.B			#$40,IVR			* Vector de interrupción
+	MOVE.B			#$40,IVR			* Vector de interrupcion
 
 	MOVE.B			#%00100010,IMRCP	* Guardar copia del IMR
 	MOVE.B			IMRCP,IMR			* Habilitar interrupciones
@@ -73,7 +73,7 @@ SCAN:
 	BEQ				scan_preparacion
 
 scan_error:
-	MOVE.L			#-1,D0						* Poner código de error
+	MOVE.L			#-1,D0				* Poner codigo de error
 	BRA				scan_fin
 
 scan_preparacion:
@@ -124,7 +124,7 @@ PRINT:
 	BEQ				print_preparacion
 
 print_error:
-	MOVE.L			#-1,D0				* Poner código de error
+	MOVE.L			#-1,D0				* Poner codigo de error
 	BRA				print_fin
 
 print_preparacion:
