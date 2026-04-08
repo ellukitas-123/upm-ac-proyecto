@@ -29,6 +29,8 @@ LF		EQU		$0A	      		* Line Feed
 FLAGT	EQU		2	      		* Flag de transmisi�n
 FLAGR   EQU     0	      		* Flag de recepci�n
 
+IMRCP:	DC.B	0				* Copia del IMR en memoria (IMR no es legible)
+
 INIT:
 	MOVE.B          #%00010000,CRA      * Reiniciar a MR1A
 	MOVE.B          #%00010000,CRB      * Reiniciar a MR1B
@@ -43,7 +45,9 @@ INIT:
 	MOVE.B          #%00000101,CRB      * Full duplex
 
 	MOVE.B 			#$40,IVR			* Vector de interrupción
-	MOVE.B 			#%00100010,IMR		* Habilitar interrupciones
+
+	MOVE.B  		#%00100010,IMRCP	* Guardar copia del IMR
+	MOVE.B 			IMRCP,IMR			* Habilitar interrupciones
 
 	MOVE.L			#RTI,$100			* Añadir la dirección de la RTI a la tabla de vectores de interrupcion
 
@@ -128,8 +132,23 @@ print_bucle:
 	BRA				print_bucle
 
 print_bucle_fin:
-	* Reactivar interrupciones de la DUART
+	
 	MOVE.L			D4,D0
+	CMP				#0,D4
+	BEQ				print_fin
+
+	SUBQ.W			#2,D2
+	CMP.W			#1,D2
+	BEQ				print_reset_imr_b 
+
+print_reset_imr_a: 					* Reactivar interrupciones de la DUART A
+	BSET			#0,IMRCP
+	MOVE.B			IMRCP,IMR
+	BRA				print_fin
+
+print_reset_imr_b:					* Reactivar interrupciones de la DUART B
+	BSET			#4,IMRCP
+	MOVE.B			IMRCP,IMR
 
 print_fin:
 	MOVEM.L 		D1-D4/A0, (A7)+		* Restaurar el estado anterior (No deja ningún valor representativo en los registros)
