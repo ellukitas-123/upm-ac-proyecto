@@ -67,20 +67,20 @@ SCAN:
 	MOVE.W			14(A6),D2			* Tamano
 
 	CMP.W			#0,D1				* Comprobar descriptor valido
-	BEQ				scan_preparacion
+	BEQ				.Lscan_preparacion
 	CMP.W			#1,D1
-	BEQ				scan_preparacion
+	BEQ				.Lscan_preparacion
 
-scan_error:
+.Lscan_error:
 	MOVE.L			#-1,D0				* Poner codigo de error
-	BRA				scan_fin
+	BRA				.Lscan_fin
 
-scan_preparacion:
+.Lscan_preparacion:
 	MOVE.W			#0,D3
 
-scan_bucle:
+.Lscan_bucle:
 	CMP.W			D3,D2
-	BEQ				scan_bucle_fin
+	BEQ				.Lscan_bucle_fin
 
 	MOVE.L			D1,D0
 
@@ -93,17 +93,17 @@ scan_bucle:
 	MOVE.L			14(A6),D2			* Recuperar Tamano
 
 	CMP.L			#-1,D0				* Comprobar si hay error
-	BEQ				scan_bucle_fin
+	BEQ				.Lscan_bucle_fin
 
 	MOVE.B			D0,(A0)+			* Copiar caracter al buffer
 
 	ADD.W			#1,D3				* Sumar contador
-	BRA				scan_bucle
+	BRA				.Lscan_bucle
 
-scan_bucle_fin:
+.Lscan_bucle_fin:
 	MOVE.L			D3,D0				* Valor de retorno (caracteres escritos)
 
-scan_fin:
+.Lscan_fin:
 	UNLK			A6					* Recuperar marco de pila
 	RTS
 
@@ -118,21 +118,21 @@ PRINT:
 	MOVE.W			14(A6),D3			* Tamano
 
 	CMP.W			#0,D2				* Comprobar descriptor valido
-	BEQ				print_preparacion
+	BEQ				.Lprint_preparacion
 	CMP.W			#1,D2
-	BEQ				print_preparacion
+	BEQ				.Lprint_preparacion
 
-print_error:
+.Lprint_error:
 	MOVE.L			#-1,D0				* Poner codigo de error
-	BRA				print_fin
+	BRA				.Lprint_fin
 
-print_preparacion:
+.Lprint_preparacion:
 	MOVE.W			#0,D4
 	ADDQ.W			#2,D2				* Descriptor de transmision
 
-print_bucle:
+.Lprint_bucle:
 	CMP.W			D4,D3
-	BEQ				print_bucle_fin
+	BEQ				.Lprint_bucle_fin
 
 	MOVE.L			D2,D0
 	MOVE.B			(A0)+,D1
@@ -147,12 +147,12 @@ print_bucle:
 	MOVE.L			14(A6),D3			* Recuperar Tamano
 
 	CMP.L			#-1,D0
-	BEQ				print_bucle_fin
+	BEQ				.Lprint_bucle_fin
 
 	ADD.W			#1,D4
-	BRA				print_bucle
+	BRA				.Lprint_bucle
 
-print_bucle_fin:
+.Lprint_bucle_fin:
 	
 	MOVE.L			D4,D0				* Valor de retorno (caracteres escritos)
 	CMP.W			#0,D4
@@ -160,18 +160,18 @@ print_bucle_fin:
 
 	SUBQ.W			#2,D2				* Recuperar descriptor original
 	CMP.W			#1,D2				* Elegir línea
-	BEQ				print_reset_imr_b
+	BEQ				.Lprint_reset_imr_b
 
-print_reset_imr_a:						* Reactivar interrupciones de la DUART A
+.Lprint_reset_imr_a:						* Reactivar interrupciones de la DUART A
 	BSET			#0,IMRCP
 	MOVE.B			IMRCP,IMR
-	BRA				print_fin
+	BRA				.Lprint_fin
 
-print_reset_imr_b:						* Reactivar interrupciones de la DUART B
+.Lprint_reset_imr_b:						* Reactivar interrupciones de la DUART B
 	BSET			#4,IMRCP
 	MOVE.B			IMRCP,IMR
 
-print_fin:
+.Lprint_fin:
 	UNLK			A6					* Recuperar marco de pila
 	RTS
 
@@ -179,6 +179,56 @@ print_fin:
 ************ RTI ************
 *****************************
 RTI:
+    MOVEM.L 		A0/D0-D1,-(A7)       	* Guarda todos los registros en la pila
+	MOVE.B			ISR,D0
+	AND.B			IMRCP,D0		
+
+	BTST			#0,D0
+	BNE				.LRTI_TxTDYA
+	BTST			#1,D0
+	BNE				.LRTI_RxRDYA
+	BTST			#4,D0
+	BNE				.LRTI_TxTDYB
+	BTST			#5,D0
+	BNE				.LRTI_RxRDYB
+
+	BRA				.LRTI_Fin
+
+.LRTI_RxRDYA:
+	MOVE.B			RBA,D1
+	MOVE.L			#0,D0
+	BSR				ESCCAR				
+	BRA				.LRTI_FIN
+.LRTI_RxRDYB:
+	MOVE.B			RBB,D1
+	MOVE.L			#1,D0
+	BSR				ESCCAR
+	BRA				.LRTI_FIN
+.LRTI_TxTDYA:
+	MOVE.L			#2,D0
+	BSR				LEECAR
+	CMP.L			#-1,D0
+	BEQ				.LRTI_DESAB_TX_A
+	MOVE.B			D0,TBA
+	BRA				.LRTI_FIN
+.LRTI_TxTDYB:
+	MOVE.L			#3,D0
+	BSR				LEECAR
+	CMP.L			#-1,D0
+	BEQ				.LRTI_DESAB_TX_B
+	MOVE.B			D0,TBB
+	BRA				.LRTI_FIN
+.LRTI_DESAB_TX_A:
+	BCLR			#0,IMRCP
+	MOVE.B			IMRCP,IMR
+	BRA				.LRTI_FIN
+.LRTI_DESAB_TX_B:
+	BCLR			#4,IMRCP
+	MOVE.B			IMRCP,IMR
+	BRA				.LRTI_FIN
+.LRTI_FIN:
+    MOVEM.L  (A7)+,A0/D0-D1
+	RTE
 
 ********************************************
 ************ PROGRAMA PRINCIPAL ************
