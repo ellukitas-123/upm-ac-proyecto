@@ -55,8 +55,7 @@ INIT:
 	RTS
 
 SCAN:
-	LINK			A6,#0				* Marco de pila
-	MOVEM.L 		D1-D3/A0, -(A7)		* Guardar el estado anterior (No deja ningún valor representativo en los registros)
+	LINK			A6,#-8				* Marco de pila
 
 	MOVE.L			8(A6),A0			* *Buffer
 	MOVE.W			12(A6),D1			* Descriptor
@@ -79,9 +78,16 @@ scan_bucle:
 	BEQ				scan_bucle_fin
 
 	MOVE.L			D1,D0
-	BSR LEECAR
 
-	CMP.L			D0,#-1
+    MOVE.L  		A0,-4(A6)			* Guardar *buffer
+    MOVE.L  		D3,-8(A6)			* Guardar contador
+	BSR LEECAR
+	MOVE.L  		-8(A6),D3			* Recuperar contador
+    MOVE.L  		-4(A6),A0			* Recuperar *buffer
+    MOVE.L  		12(A6),D1			* Recuperar descriptor
+	MOVE.L  		14(A6),D2			* Recuperar Tamano
+
+	CMP.L			#-1,D0
 	BEQ				scan_bucle_fin
 	MOVE.B 			D0,(A0)+
 
@@ -92,13 +98,11 @@ scan_bucle_fin:
 	MOVE.L			D3,D0
 
 scan_fin:
-	MOVEM.L 		D1-D3/A0, (A7)+		* Restaurar el estado anterior (No deja ningún valor representativo en los registros)
 	UNLK			A6
 	RTS
 
 PRINT:
-	LINK			A6,#0				* Marco de pila
-	MOVEM.L 		D1-D4/A0, -(A7)		* Guardar el estado anterior (No deja ningún valor representativo en los registros)
+	LINK			A6,#-12				* Marco de pila
 
 	MOVE.L			8(A6),A0			* *Buffer
 	MOVE.W			12(A6),D2			* Descriptor
@@ -110,8 +114,8 @@ PRINT:
 	BEQ				print_preparacion
 
 print_error:
-	MOVE.L  #-1,D0         * Poner código de error
-    BRA     print_fin
+	MOVE.L  		#-1,D0         * Poner código de error
+    BRA     		print_fin
 
 print_preparacion:
 	MOVE.W			#0,D4
@@ -123,9 +127,17 @@ print_bucle:
 
 	MOVE.L			D2,D0
 	MOVE.B			(A0)+,D1
-	BSR ESCCAR
 
-	CMP.L				#-1,D0
+	MOVE.L  		D2,-4(A6)			* Guardar descriptor modificado
+    MOVE.L  		A0,-8(A6)			* Guardar *buffer
+    MOVE.L  		D4,-12(A6)			* Guardar contador
+	BSR ESCCAR
+	MOVE.L  		-12(A6),D4			* Recuperar contador
+    MOVE.L  		-8(A6),A0			* Recuperar *buffer
+    MOVE.L  		-4(A6),D2			* Recuperar descriptor modificado
+	MOVE.L  		14(A6),D3			* Recuperar Tamano
+
+	CMP.L			#-1,D0
 	BEQ				print_bucle_fin
 
 	ADD.W			#1,D4
@@ -134,7 +146,7 @@ print_bucle:
 print_bucle_fin:
 	
 	MOVE.L			D4,D0
-	CMP				#0,D4
+	CMP.W				#0,D4
 	BEQ				print_fin
 
 	SUBQ.W			#2,D2
@@ -151,7 +163,6 @@ print_reset_imr_b:					* Reactivar interrupciones de la DUART B
 	MOVE.B			IMRCP,IMR
 
 print_fin:
-	MOVEM.L 		D1-D4/A0, (A7)+		* Restaurar el estado anterior (No deja ningún valor representativo en los registros)
 	UNLK			A6
 	RTS
 
