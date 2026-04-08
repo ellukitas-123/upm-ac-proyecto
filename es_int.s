@@ -89,8 +89,8 @@ SCAN:
 	BSR				LEECAR
 	MOVE.L			-8(A6),D3			* Recuperar contador
 	MOVE.L			-4(A6),A0			* Recuperar *buffer
-	MOVE.L			12(A6),D1			* Recuperar descriptor
-	MOVE.L			14(A6),D2			* Recuperar Tamano
+	MOVE.W			12(A6),D1			* Recuperar descriptor
+	MOVE.W			14(A6),D2			* Recuperar Tamano
 
 	CMP.L			#-1,D0				* Comprobar si hay error
 	BEQ				.Lscan_bucle_fin
@@ -144,7 +144,7 @@ PRINT:
 	MOVE.L			-12(A6),D4			* Recuperar contador
 	MOVE.L			-8(A6),A0			* Recuperar *buffer
 	MOVE.L			-4(A6),D2			* Recuperar descriptor modificado
-	MOVE.L			14(A6),D3			* Recuperar Tamano
+	MOVE.W			14(A6),D3			* Recuperar Tamano
 
 	CMP.L			#-1,D0
 	BEQ				.Lprint_bucle_fin
@@ -227,7 +227,7 @@ RTI:
 	MOVE.B			IMRCP,IMR
 	BRA				.LRTI_FIN
 .LRTI_FIN:
-    MOVEM.L  (A7)+,A1-A6/D0-D7
+    MOVEM.L  (A7)+,A0-A6/D0-D7
 	RTE
 
 ********************************************
