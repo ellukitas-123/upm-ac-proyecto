@@ -28,12 +28,15 @@ LF		EQU		$0A				* Line Feed
 FLAGT	EQU		2				* Flag de transmision
 FLAGR	EQU		0				* Flag de recepcion
 
+* Inicialización
 		ORG 	$0
 		DC.L 	$8000 			* Puntero de pila
 		DC.L 	INICIO			* Excepción reset a INICIO
 
+* Código
 		ORG		$400
-IMRCP:	DC.B	0				* Copia del IMR en memoria (IMR no es legible)
+IMRCP:	DC.W	0				* Copia del IMR en memoria (IMR no es legible)
+								* W para que las instrucciones estén alineadas después
 
 ******************************
 ************ INIT ************
@@ -173,12 +176,12 @@ print_b_f:
 	CMP.W			#1,D2				* Elegir línea
 	BEQ				print_i_b
 
-	* Reactivar interrupciones de la DUART A
+										* Reactivar interrupciones de la DUART A
 	BSET			#0,IMRCP
 	MOVE.B			IMRCP,IMR
 	BRA				print_fin
 
-print_i_b:					* Reactivar interrupciones de la DUART B
+print_i_b:								* Reactivar interrupciones de la DUART B
 	BSET			#4,IMRCP
 	MOVE.B			IMRCP,IMR
 
@@ -190,7 +193,7 @@ print_fin:
 ************ RTI ************
 *****************************
 RTI:
-    MOVEM.L 		A0-A6/D0-D7,-(A7)       	* Guarda todos los registros en la pila
+    MOVEM.L 		A0-A6/D0-D7,-(A7)	* Guarda todos los registros en la pila
 	MOVE.B			ISR,D0
 	AND.B			IMRCP,D0		
 
@@ -238,13 +241,73 @@ RTI_DI_TX_B:
 	MOVE.B			IMRCP,IMR
 	BRA				RTI_FIN
 RTI_FIN:
-    MOVEM.L  (A7)+,A0-A6/D0-D7
+    MOVEM.L  (A7)+,A0-A6/D0-D7			* Restaura todos los registros en la pila
 	RTE
 
 ********************************************
 ************ PROGRAMA PRINCIPAL ************
 ********************************************
-INICIO: RTS
+BUFFER: DS.B    2100        * Buffer para lectura y escritura de caracteres
+PARDIR: DC.L    0           * Dirección que se pasa como parámetro
+PARTAM: DC.W    0           * Tamaño que se pasa como parámetro
+CONTC:  DC.W    0           * Contador de caracteres a imprimir
+DESA:   EQU     0           * Descriptor línea A
+DESB:   EQU     1           * Descriptor línea B
+TAMBS:  EQU     30          * Tamaño de bloque para SCAN
+TAMBP:  EQU     7           * Tamaño de bloque para PRINT
+
+        * Manejadores de excepciones
+INICIO: MOVE.L  #BUS_ERROR,8      * Bus error handler
+        MOVE.L  #ADDRESS_ER,12    * Address error handler
+        MOVE.L  #ILLEGAL_IN,16    * Illegal instruction handler
+        MOVE.L  #PRIV_VIOLT,32    * Privilege violation handler
+        MOVE.L  #ILLEGAL_IN,40    * Illegal instruction handler
+        MOVE.L  #ILLEGAL_IN,44    * Illegal instruction handler
+
+        BSR     INIT
+        MOVE.W  #$2000,SR         * Permite interrupciones
+
+BUCPR:  MOVE.W  #TAMBS,PARTAM     * Inicializa parámetro de tamaño
+        MOVE.L  #BUFFER,PARDIR    * Parámetro BUFFER = comienzo del buffer
+OTRAL:  MOVE.W  PARTAM,-(A7)      * Tamaño de bloque
+        MOVE.W  #DESA,-(A7)       * Puerto A
+        MOVE.L  PARDIR,-(A7)      * Dirección de lectura
+ESPL:   BSR     SCAN
+        ADD.L   #8,A7             * Restablece la pila
+        ADD.L   D0,PARDIR         * Calcula la nueva dirección de lectura
+        SUB.W   D0,PARTAM         * Actualiza el número de caracteres leídos
+        BNE     OTRAL             * Si no se han leído todas los caracteres
+                                  * del bloque se vuelve a leer
+
+        MOVE.W  #TAMBS,CONTC      * Inicializa contador de caracteres a imprimir
+        MOVE.L  #BUFFER,PARDIR    * Parámetro BUFFER = comienzo del buffer
+OTRAE:  MOVE.W  #TAMBP,PARTAM     * Tamaño de escritura = Tamaño de bloque
+ESPE:   MOVE.W  PARTAM,-(A7)      * Tamaño de escritura
+        MOVE.W  #DESB,-(A7)       * Puerto B
+        MOVE.L  PARDIR,-(A7)      * Dirección de escritura
+        BSR     PRINT
+        ADD.L   #8,A7             * Restablece la pila
+        ADD.L   D0,PARDIR         * Calcula la nueva dirección del buffer
+        SUB.W   D0,CONTC          * Actualiza el contador de caracteres
+        BEQ     SALIR             * Si no quedan caracteres se acaba
+        SUB.W   D0,PARTAM         * Actualiza el tamaño de escritura
+        BNE     ESPE              * Si no se ha escrito todo el bloque se insiste
+        CMP.W   #TAMBP,CONTC      * Si el nº de caracteres que quedan es menor que
+                                  * el tamaño establecido se imprime ese número
+        BHI     OTRAE             * Siguiente bloque
+        MOVE.W  CONTC,PARTAM
+        BRA     ESPE              * Siguiente bloque
+
+SALIR:  BRA     BUCPR
+
+BUS_ERROR:      BREAK             * Bus error handler
+                NOP
+ADDRESS_ER:     BREAK             * Address error handler
+                NOP
+ILLEGAL_IN:     BREAK             * Illegal instruction handler
+                NOP
+PRIV_VIOLT:     BREAK             * Privilege violation handler
+                NOP
 
 **********************************
 ************ INCLUDES ************
