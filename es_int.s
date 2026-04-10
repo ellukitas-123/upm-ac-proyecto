@@ -20,7 +20,6 @@ SRB		EQU		$EFFC13			* de estado B (lectura)
 CSRB	EQU		$EFFC13			* de seleccion de reloj B (escritura)
 
 IVR		EQU		$EFFC19			* Vector de interrupcion
-ISR		EQU		$EFFC0B			* Estado de interrupcion
 IMR		EQU		$EFFC0B			* Mascara de interrupcion
 
 CR		EQU		$0D				* Carriage Return
@@ -305,7 +304,7 @@ ESPE:   MOVE.W  PARTAM,-(A7)      * Tamaño de escritura
         BEQ     SALIR             * Si no quedan caracteres se acaba
         SUB.W   D0,PARTAM         * Actualiza el tamaño de escritura
         BNE     ESPE              * Si no se ha escrito todo el bloque se insiste
-        CMP.L   #TAMBP,CONTC      * Si el nº de caracteres que quedan es menor que
+        CMP.W   #TAMBP,CONTC      * Si el nº de caracteres que quedan es menor que
                                   * el tamaño establecido se imprime ese número
         BHI     OTRAE             * Siguiente bloque
         MOVE.W  CONTC,PARTAM
