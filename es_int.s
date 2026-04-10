@@ -70,13 +70,16 @@ INIT:
 SCAN:
 	LINK			A6,#-8				* Marco de pila
 
+	EOR.L			D1,D1				* Limpiar basura de registros
+	EOR.L			D2,D2
+
 	MOVE.L			8(A6),A0			* *Buffer
 	MOVE.W			12(A6),D1			* Descriptor
 	MOVE.W			14(A6),D2			* Tamano
 
-	CMP.W			#0,D1				* Comprobar descriptor valido
+	CMP.L			#0,D1				* Comprobar descriptor valido
 	BEQ				scan_prep
-	CMP.W			#1,D1
+	CMP.L			#1,D1
 	BEQ				scan_prep
 
 scan_error:
@@ -84,10 +87,10 @@ scan_error:
 	BRA				scan_fin
 
 scan_prep:
-	MOVE.W			#0,D3
+	EOR.L			D3,D3				* Contador
 
 scan_bc:
-	CMP.W			D3,D2
+	CMP.L			D3,D2
 	BEQ				scan_bc_f
 
 	MOVE.L			D1,D0
@@ -95,6 +98,10 @@ scan_bc:
 	MOVE.L			A0,-4(A6)			* Guardar *buffer
 	MOVE.L			D3,-8(A6)			* Guardar contador
 	BSR				LEECAR
+
+	EOR.L			D1,D1				* Limpiar basura de registros
+	EOR.L			D2,D2
+
 	MOVE.L			-8(A6),D3			* Recuperar contador
 	MOVE.L			-4(A6),A0			* Recuperar *buffer
 	MOVE.W			12(A6),D1			* Recuperar descriptor
@@ -121,16 +128,16 @@ scan_fin:
 PRINT:
 	LINK			A6,#-12				* Marco de pila
 
-	MOVE.L			#0,D2				* Como luego se usa .W en D1 y D2, se guardará basura en los 
-	MOVE.L			#0,D3				* 16 bits más significativos, entonces hay que resetearlos
+	EOR.L			D2,D2				* Limpiar basura de registros
+	EOR.L			D3,D3
 
 	MOVE.L			8(A6),A0			* *Buffer
 	MOVE.W			12(A6),D2			* Descriptor
 	MOVE.W			14(A6),D3			* Tamano
 
-	CMP.W			#0,D2				* Comprobar descriptor valido
+	CMP.L			#0,D2				* Comprobar descriptor valido
 	BEQ				print_prep
-	CMP.W			#1,D2
+	CMP.L			#1,D2
 	BEQ				print_prep
 
 print_error:
@@ -138,12 +145,14 @@ print_error:
 	BRA				print_fin
 
 print_prep:
-	MOVE.W			#0,D4
+	EOR.L			D4,D4				* Contador
 	ADDQ.W			#2,D2				* Descriptor de transmision
 
 print_bc:
-	CMP.W			D4,D3
+	CMP.L			D4,D3
 	BEQ				print_b_f
+
+	EOR.L			D1,D1				* Limpiar basura de registros
 
 	MOVE.L			D2,D0
 	MOVE.B			(A0)+,D1
@@ -152,6 +161,9 @@ print_bc:
 	MOVE.L			A0,-8(A6)			* Guardar *buffer
 	MOVE.L			D4,-12(A6)			* Guardar contador
 	BSR				ESCCAR
+
+	EOR.L			D3,D3				* Limpiar basura de registros
+
 	MOVE.L			-12(A6),D4			* Recuperar contador
 	MOVE.L			-8(A6),A0			* Recuperar *buffer
 	MOVE.L			-4(A6),D2			* Recuperar descriptor modificado
@@ -166,11 +178,11 @@ print_bc:
 print_b_f:
 	
 	MOVE.L			D4,D0				* Valor de retorno (caracteres escritos)
-	CMP.W			#0,D4
+	CMP.L			#0,D4
 	BEQ				print_fin
 
 	SUBQ.W			#2,D2				* Recuperar descriptor original
-	CMP.W			#1,D2				* Elegir línea
+	CMP.L			#1,D2				* Elegir línea
 	BEQ				print_i_b
 
 										* Reactivar interrupciones de la DUART A
@@ -191,6 +203,10 @@ print_fin:
 *****************************
 RTI:
     MOVEM.L 		A0-A6/D0-D7,-(A7)	* Guarda todos los registros en la pila
+
+	EOR.L			D0,D0				* Limpiar basura de registros
+	EOR.L			D1,D1
+
 	MOVE.B			ISR,D0
 	AND.B			IMRCP,D0		
 
@@ -289,7 +305,7 @@ ESPE:   MOVE.W  PARTAM,-(A7)      * Tamaño de escritura
         BEQ     SALIR             * Si no quedan caracteres se acaba
         SUB.W   D0,PARTAM         * Actualiza el tamaño de escritura
         BNE     ESPE              * Si no se ha escrito todo el bloque se insiste
-        CMP.W   #TAMBP,CONTC      * Si el nº de caracteres que quedan es menor que
+        CMP.L   #TAMBP,CONTC      * Si el nº de caracteres que quedan es menor que
                                   * el tamaño establecido se imprime ese número
         BHI     OTRAE             * Siguiente bloque
         MOVE.W  CONTC,PARTAM
