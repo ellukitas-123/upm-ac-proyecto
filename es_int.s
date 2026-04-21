@@ -203,6 +203,8 @@ print_fin:
 RTI:
     MOVEM.L 		A0-A6/D0-D7,-(A7)	* Guarda todos los registros en la pila
 
+LOOPRTI:
+
 	EOR.L			D0,D0				* Limpiar basura de registros
 	EOR.L			D1,D1
 
@@ -224,34 +226,34 @@ RTI_RxRA:
 	MOVE.B			RBA,D1
 	MOVE.L			#0,D0
 	BSR				ESCCAR				
-	BRA				RTI_FIN
+	BRA				LOOPRTI
 RTI_RxRB:
 	MOVE.B			RBB,D1
 	MOVE.L			#1,D0
 	BSR				ESCCAR
-	BRA				RTI_FIN
+	BRA				LOOPRTI
 RTI_TxTA:
 	MOVE.L			#2,D0
 	BSR				LEECAR
 	CMP.L			#-1,D0
 	BEQ				RTI_D_TX_A
 	MOVE.B			D0,TBA
-	BRA				RTI_FIN
+	BRA				LOOPRTI
 RTI_TxTB:
 	MOVE.L			#3,D0
 	BSR				LEECAR
 	CMP.L			#-1,D0
 	BEQ				RTI_DI_TX_B
 	MOVE.B			D0,TBB
-	BRA				RTI_FIN
+	BRA				LOOPRTI
 RTI_D_TX_A:
 	BCLR			#0,IMRCP
 	MOVE.B			IMRCP,IMR
-	BRA				RTI_FIN
+	BRA				LOOPRTI
 RTI_DI_TX_B:
 	BCLR			#4,IMRCP
 	MOVE.B			IMRCP,IMR
-	BRA				RTI_FIN
+	BRA				LOOPRTI
 RTI_FIN:
     MOVEM.L  (A7)+,A0-A6/D0-D7			* Restaura todos los registros en la pila
 	RTE
